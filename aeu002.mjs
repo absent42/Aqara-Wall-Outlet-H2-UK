@@ -107,7 +107,7 @@ export default {
         }),
 
         m.binary({
-            name: "child_lock_socket_1",
+            name: "child_lock",
             cluster: "manuSpecificLumi",
             attribute: {ID: 0x0285, type: 0x20},
             endpointName: "1",
@@ -120,7 +120,7 @@ export default {
         }),
 
         m.binary({
-            name: "child_lock_socket_2",
+            name: "child_lock",
             cluster: "manuSpecificLumi",
             attribute: {ID: 0x0285, type: 0x20},
             endpointName: "2",
