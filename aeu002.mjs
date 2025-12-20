@@ -7,7 +7,7 @@ const {lumiModernExtend, manufacturerCode, numericAttributes2Payload} = lumi;
 const e = exposes.presets;
 const ea = exposes.access;
 
-// Pre-existing lumiElectricityMeter exposes volatage which is not supported by this device
+// Pre-existing lumiElectricityMeter exposes voltage which is not supported by this device
 // Device appears to only report overall readings, not per-socket
 const lumiH2ElectricityMeter = {
     cluster: "manuSpecificLumi",
