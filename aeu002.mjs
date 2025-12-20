@@ -41,24 +41,12 @@ const lumiH2Power = {
             case 1:
                 return {total_power: power};
             case 2:
-                return {power_socket1_usb: power};
+                return {power_socket_1_usb: power};
             case 3:
-                return {power_socket2: power};
+                return {power_socket_2: power};
             default:
                 return;
         }
-    },
-};
-
-// Pre-existing lumiOverloadProtection produces config error due to access: "ALL"
-const lumiH2OverloadProtection = {
-    cluster: "manuSpecificLumi",
-    type: ["attributeReport", "readResponse"],
-    convert: (model, msg) => {
-        if (!("532" in msg.data)) return;
-        const value = msg.data[532];
-        if (typeof value !== "number") return;
-        return {overload_protection: value};
     },
 };
 
@@ -68,7 +56,7 @@ export default {
     vendor: "Aqara",
     description: "Aqara Wall Outlet H2 UK (Dual USB-C)",
 
-    fromZigbee: [lumiH2Power, lumiH2ElectricityMeter, lumiH2OverloadProtection],
+    fromZigbee: [lumiH2Power, lumiH2ElectricityMeter],
 
     configure: async (device, coordinatorEndpoint) => {
         const endpoint1 = device.getEndpoint(1);
@@ -132,6 +120,7 @@ export default {
             zigbeeCommandOptions: {manufacturerCode},
         }),
 
+        // Pre-existing lumiOverloadProtection produces config error due to access: "ALL"
         m.numeric({
             name: "overload_protection",
             cluster: "manuSpecificLumi",
@@ -147,13 +136,12 @@ export default {
 
         lumiModernExtend.lumiLedIndicator(),
         lumiModernExtend.lumiFlipIndicatorLight(),
-        
     ],
 
     exposes: [
         e.numeric("total_power", ea.STATE).withUnit("W").withDescription("Total combined outlet power consumption"),
-        e.numeric("power_socket1_usb", ea.STATE).withUnit("W").withDescription("Combined power of socket 1 and USB"),
-        e.numeric("power_socket2", ea.STATE).withUnit("W").withDescription("Power of socket 2"),
+        e.numeric("power_socket_1_usb", ea.STATE).withUnit("W").withDescription("Combined power of socket 1 and USB"),
+        e.numeric("power_socket_2", ea.STATE).withUnit("W").withDescription("Power of socket 2"),
         e.energy(),
         e.current(),
     ],
