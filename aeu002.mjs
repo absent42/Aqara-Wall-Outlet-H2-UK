@@ -136,6 +136,7 @@ export default {
 
         lumiModernExtend.lumiLedIndicator(),
         lumiModernExtend.lumiFlipIndicatorLight(),
+        m.identify(),
     ],
 
     exposes: [
