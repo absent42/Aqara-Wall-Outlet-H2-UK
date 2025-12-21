@@ -10,3 +10,7 @@ In Zigbee2MQTT go to **settings** → **dev console** → **external converters*
 Alternatively place the file **aeu002.mjs** in the folder **zigbee2mqtt/data/external_converters** and restart Zigbee2MQTT.
 
 If an external converter is active for a device a cyan icon with "Supported: external" will be displayed under the device name in Zigbee2MQTT.
+
+## Pairing
+
+Double tap either button on the outlet then long press it for 5 seconds, the button LED should start to blink when it enters pairing mode.
