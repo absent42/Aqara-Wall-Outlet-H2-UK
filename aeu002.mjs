@@ -128,7 +128,7 @@ export default {
     zigbeeModel: ["lumi.plug.aeu002"],
     model: "WP-P09D",
     vendor: "Aqara",
-    description: "Aqara Wall Outlet H2 UK (Dual USB-C)",
+    description: "Wall Outlet H2 UK",
 
     fromZigbee: [lumiH2Power, lumiH2ElectricityMeter],
 
