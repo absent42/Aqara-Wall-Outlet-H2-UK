@@ -148,14 +148,6 @@ export default {
         await endpoint2.read("manuSpecificLumi", [0x0285], {manufacturerCode: manufacturerCode}); // Socket 2 Child lock
         await endpoint1.read("manuSpecificLumi", [0x0286], {manufacturerCode: manufacturerCode}); // Socket 1 MultiClick
         await endpoint2.read("manuSpecificLumi", [0x0286], {manufacturerCode: manufacturerCode}); // Socket 2 MultiClick
-
-        await reporting.bind(endpoint1, coordinatorEndpoint, ["genOnOff"]);
-        await reporting.bind(endpoint2, coordinatorEndpoint, ["genOnOff"]);
-        await reporting.bind(endpoint3, coordinatorEndpoint, ["genOnOff"]);
-
-        await reporting.onOff(endpoint1);
-        await reporting.onOff(endpoint2);
-        await reporting.onOff(endpoint3);
     },
 
     extend: [
