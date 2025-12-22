@@ -135,18 +135,27 @@ export default {
     configure: async (device, coordinatorEndpoint) => {
         const endpoint1 = device.getEndpoint(1);
         const endpoint2 = device.getEndpoint(2);
+        const endpoint3 = device.getEndpoint(3);
 
-        // Global settings - endpoint 1 only
+        // Global settings
         await endpoint1.read("manuSpecificLumi", [0x00f0], {manufacturerCode: manufacturerCode}); // Flip indicator light
         await endpoint1.read("manuSpecificLumi", [0x0203], {manufacturerCode: manufacturerCode}); // LED indicator
         await endpoint1.read("manuSpecificLumi", [0x020b], {manufacturerCode: manufacturerCode}); // Overload protection
         await endpoint1.read("manuSpecificLumi", [0x0517], {manufacturerCode: manufacturerCode}); // Power on behavior
 
-        // Per-socket settings - both endpoints
+        // Per-socket settings
         await endpoint1.read("manuSpecificLumi", [0x0285], {manufacturerCode: manufacturerCode}); // Socket 1 Child lock
         await endpoint2.read("manuSpecificLumi", [0x0285], {manufacturerCode: manufacturerCode}); // Socket 2 Child lock
         await endpoint1.read("manuSpecificLumi", [0x0286], {manufacturerCode: manufacturerCode}); // Socket 1 MultiClick
         await endpoint2.read("manuSpecificLumi", [0x0286], {manufacturerCode: manufacturerCode}); // Socket 2 MultiClick
+
+        await reporting.bind(endpoint1, coordinatorEndpoint, ["genOnOff"]);
+        await reporting.bind(endpoint2, coordinatorEndpoint, ["genOnOff"]);
+        await reporting.bind(endpoint3, coordinatorEndpoint, ["genOnOff"]);
+
+        await reporting.onOff(endpoint1);
+        await reporting.onOff(endpoint2);
+        await reporting.onOff(endpoint3);
     },
 
     extend: [
