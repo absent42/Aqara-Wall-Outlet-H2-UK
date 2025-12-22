@@ -1,5 +1,6 @@
 import * as exposes from "zigbee-herdsman-converters/lib/exposes";
 import * as lumi from "zigbee-herdsman-converters/lib/lumi";
+import {fromZigbee} from "zigbee-herdsman-converters/lib/lumi";
 import * as m from "zigbee-herdsman-converters/lib/modernExtend";
 
 const {lumiModernExtend, manufacturerCode, numericAttributes2Payload} = lumi;
@@ -50,6 +51,79 @@ const lumiH2Power = {
     },
 };
 
+// Custom lumiOnOff function with optional device_temperature and power_outage_count exposes
+const customLumiOnOff = (args) => {
+    const options = {
+        operationMode: false,
+        lockRelay: false,
+        deviceTemperature: true,
+        powerOutageCount: true,
+        ...args,
+    };
+
+    const result = m.onOff({powerOnBehavior: false, ...options});
+
+    if (!result.fromZigbee) result.fromZigbee = [];
+    if (!result.toZigbee) result.toZigbee = [];
+    if (!result.exposes) result.exposes = [];
+
+    result.fromZigbee.push(fromZigbee.lumi_specific);
+
+    if (options.deviceTemperature) {
+        result.exposes.push(e.device_temperature());
+    }
+
+    if (options.powerOutageCount) {
+        result.exposes.push(e.power_outage_count());
+    }
+
+    if (options.powerOutageMemory === "binary") {
+        const extend = lumiModernExtend.lumiPowerOutageMemory();
+        if (extend.toZigbee && result.toZigbee) result.toZigbee.push(...extend.toZigbee);
+        if (extend.exposes && result.exposes) result.exposes.push(...extend.exposes);
+    } else if (options.powerOutageMemory === "enum") {
+        const extend = lumiModernExtend.lumiPowerOnBehavior();
+        if (extend.toZigbee && result.toZigbee) result.toZigbee.push(...extend.toZigbee);
+        if (extend.exposes && result.exposes) result.exposes.push(...extend.exposes);
+    }
+
+    if (options.operationMode === true) {
+        if (options.endpointNames) {
+            options.endpointNames.forEach((ep) => {
+                const epExtend = lumiModernExtend.lumiOperationMode({
+                    description: `Decoupled mode for ${ep.toString()} button`,
+                    endpointName: ep,
+                });
+                if (epExtend.toZigbee && result.toZigbee) result.toZigbee.push(...epExtend.toZigbee);
+                if (epExtend.exposes && result.exposes) result.exposes.push(...epExtend.exposes);
+            });
+        } else {
+            const extend = lumiModernExtend.lumiOperationMode({description: "Decoupled mode for a button"});
+            if (extend.toZigbee && result.toZigbee) result.toZigbee.push(...extend.toZigbee);
+            if (extend.exposes && result.exposes) result.exposes.push(...extend.exposes);
+        }
+    }
+
+    if (options.lockRelay) {
+        if (options.endpointNames) {
+            options.endpointNames.forEach((ep) => {
+                const epExtend = lumiModernExtend.lumiLockRelay({
+                    description: `Locks ${ep.toString()} relay and prevents it from operating`,
+                    endpointName: ep,
+                });
+                if (epExtend.toZigbee && result.toZigbee) result.toZigbee.push(...epExtend.toZigbee);
+                if (epExtend.exposes && result.exposes) result.exposes.push(...epExtend.exposes);
+            });
+        } else {
+            const extend = lumiModernExtend.lumiLockRelay();
+            if (extend.toZigbee && result.toZigbee) result.toZigbee.push(...extend.toZigbee);
+            if (extend.exposes && result.exposes) result.exposes.push(...extend.exposes);
+        }
+    }
+
+    return result;
+};
+
 export default {
     zigbeeModel: ["lumi.plug.aeu002"],
     model: "WP-P09D",
@@ -80,8 +154,9 @@ export default {
         m.deviceEndpoints({endpoints: {1: 1, 2: 2, usb: 3}}),
         m.forcePowerSource({powerSource: "Mains (single phase)"}),
         lumiModernExtend.lumiZigbeeOTA(),
-        lumiModernExtend.lumiOnOff({
+        customLumiOnOff({
             endpointNames: ["1", "2", "usb"],
+            deviceTemperature: false,
         }),
 
         lumiModernExtend.lumiPowerOnBehavior(),
