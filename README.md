@@ -18,7 +18,7 @@ First switch the device to the Zigbee firmware by connecting it to the Aqara Hom
 Double tap either button on the outlet then long press it for 5 seconds, the button LED should start to blink when it enters pairing mode. Now join it to the Zigbee2MQTT network in the standard way. 
 
 ## Features
-- Individual socket & USB switching
+- Individual socket 1, socket 2, & USB switching
 - Power readings for each socket (socket 1 and USB are combined for power readings, this is a hardware limitation), and a total for the device
 - Energy usage for overall device
 - Current draw for the overall device
