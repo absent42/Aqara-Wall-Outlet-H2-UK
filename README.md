@@ -19,8 +19,9 @@ Double tap either button on the outlet then long press it for 5 seconds, the but
 
 ## Features
 - Individual socket & USB switching
-- Power readings for each socket (socket 1 and USB are combined for power readings, this is a hardware limitation)
-- Power usage for overall device
+- Power readings for each socket (socket 1 and USB are combined for power readings, this is a hardware limitation), and a total for the device
+- Energy usage for overall device
+- Current draw for the overall device
 - Multi-Tap function for each button, single press, double press, hold and release
 - Child lock for each button
 - LED controls
