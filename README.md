@@ -13,4 +13,6 @@ If an external converter is active for a device a cyan icon with "Supported: ext
 
 ## Pairing
 
+First switch the device to the Zigbee firmware via the Aqara Home app on your phone. 
+
 Double tap either button on the outlet then long press it for 5 seconds, the button LED should start to blink when it enters pairing mode.
