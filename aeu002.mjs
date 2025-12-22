@@ -42,7 +42,7 @@ const lumiH2Power = {
             case 1:
                 return {total_power: power};
             case 2:
-                return {power_socket_1_usb: power};
+                return {power_socket_1_and_usb: power};
             case 3:
                 return {power_socket_2: power};
             default:
@@ -225,7 +225,7 @@ export default {
 
     exposes: [
         e.numeric("total_power", ea.STATE).withUnit("W").withDescription("Total combined outlet power consumption"),
-        e.numeric("power_socket_1_usb", ea.STATE).withUnit("W").withDescription("Combined power of socket 1 and USB"),
+        e.numeric("power_socket_1_and_usb", ea.STATE).withUnit("W").withDescription("Combined power of socket 1 and USB"),
         e.numeric("power_socket_2", ea.STATE).withUnit("W").withDescription("Power of socket 2"),
         e.energy(),
         e.current(),
