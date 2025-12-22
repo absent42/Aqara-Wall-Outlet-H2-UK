@@ -1,8 +1,6 @@
 # Aqara-Wall-Outlet-H2-UK
 Zigbee2MQTT external converter for Aqara Wall Outlet H2 UK
 
-**Dual UBC-C model only currently supported, ZigbeModel for single USB-C version not known**
-
 ## Installation
 
 In Zigbee2MQTT go to **settings** → **dev console** → **external converters**, create a new converter named **aeu002.mjs** and paste in the contents of the file. Click save then restart Zigbee2MQTT via **settings** → **tools**
