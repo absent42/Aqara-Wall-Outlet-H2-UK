@@ -10,45 +10,60 @@ const ea = exposes.access;
 
 // Pre-existing lumiElectricityMeter exposes voltage which is not supported by this device
 // Device appears to only report overall readings, not per-socket
-const lumiH2ElectricityMeter = {
-    cluster: "manuSpecificLumi",
-    type: ["attributeReport", "readResponse"],
-    convert: async (model, msg, publish, options, meta) => {
-        const result = await numericAttributes2Payload(msg, meta, model, options, msg.data);
-        if (!result) return;
+const lumiH2ElectricityMeter = () => {
+    const fromZigbee = [{
+        cluster: "manuSpecificLumi",
+        type: ["attributeReport", "readResponse"],
+        convert: async (model, msg, publish, options, meta) => {
+            const result = await numericAttributes2Payload(msg, meta, model, options, msg.data);
+            if (!result) return;
 
-        const filtered = {};
-        for (const [key, value] of Object.entries(result)) {
-            if (value !== undefined && value !== null) {
-                filtered[key] = value;
+            const filtered = {};
+            for (const [key, value] of Object.entries(result)) {
+                if (value !== undefined && value !== null) {
+                    filtered[key] = value;
+                }
             }
-        }
 
-        return Object.keys(filtered).length > 0 ? filtered : undefined;
-    },
+            return Object.keys(filtered).length > 0 ? filtered : undefined;
+        },
+    }];
+
+    return {
+        isModernExtend: true,
+        fromZigbee,
+    };
 };
 
 // Power reporting for each socket is at a different endpoint to the switch state
-const lumiH2Power = {
-    cluster: "haElectricalMeasurement",
-    type: ["attributeReport", "readResponse"],
-    convert: (model, msg) => {
-        if (!("activePower" in msg.data)) return;
+const lumiActivePower = (args) => {
+    const {name, description, endpoint} = args;
+    
+    const fromZigbee = [{
+        cluster: "haElectricalMeasurement",
+        type: ["attributeReport", "readResponse"],
+        convert: (model, msg) => {
+            if (!("activePower" in msg.data)) return;
+            if (msg.endpoint.ID !== endpoint) return;
 
-        const power = msg.data.activePower;
-        if (typeof power !== "number") return;
+            const power = msg.data.activePower;
+            if (typeof power !== "number") return;
 
-        switch (msg.endpoint.ID) {
-            case 1:
-                return {total_power: power};
-            case 2:
-                return {power_socket_1_and_usb: power};
-            case 3:
-                return {power_socket_2: power};
-            default:
-                return;
-        }
-    },
+            return {[name]: power};
+        },
+    }];
+
+    const exposes = [
+        e.numeric(name, ea.STATE)
+            .withUnit("W")
+            .withDescription(description)
+    ];
+
+    return {
+        isModernExtend: true,
+        fromZigbee,
+        exposes,
+    };
 };
 
 // Custom lumiOnOff function with optional device_temperature and power_outage_count exposes
@@ -130,12 +145,9 @@ export default {
     vendor: "Aqara",
     description: "Wall Outlet H2 UK",
 
-    fromZigbee: [lumiH2Power, lumiH2ElectricityMeter],
-
     configure: async (device, coordinatorEndpoint) => {
         const endpoint1 = device.getEndpoint(1);
         const endpoint2 = device.getEndpoint(2);
-        const endpoint3 = device.getEndpoint(3);
 
         // Global settings
         await endpoint1.read("manuSpecificLumi", [0x00f0], {manufacturerCode: manufacturerCode}); // Flip indicator light
@@ -159,6 +171,12 @@ export default {
             endpointNames: ["1", "2", "usb"],
             deviceTemperature: false,
         }),
+
+        lumiActivePower({name: "total_power", description: "Total combined outlet power consumption", endpoint: 1}),
+        lumiActivePower({name: "power_socket_1_and_usb", description: "Combined power of socket 1 and USB", endpoint: 2}),
+        lumiActivePower({name: "power_socket_2", description: "Power of socket 2", endpoint: 3}),
+
+        lumiH2ElectricityMeter(),
 
         lumiModernExtend.lumiPowerOnBehavior(),
 
@@ -216,9 +234,6 @@ export default {
     ],
 
     exposes: [
-        e.numeric("total_power", ea.STATE).withUnit("W").withDescription("Total combined outlet power consumption"),
-        e.numeric("power_socket_1_and_usb", ea.STATE).withUnit("W").withDescription("Combined power of socket 1 and USB"),
-        e.numeric("power_socket_2", ea.STATE).withUnit("W").withDescription("Power of socket 2"),
         e.energy(),
         e.current(),
     ],
