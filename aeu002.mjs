@@ -10,34 +10,59 @@ const ea = exposes.access;
 
 // Pre-existing lumiElectricityMeter exposes voltage which is not supported by this device
 // Device appears to only report overall readings, not per-socket
-const lumiH2ElectricityMeter = () => {
-    const fromZigbee = [
-        {
-            cluster: "manuSpecificLumi",
-            type: ["attributeReport", "readResponse"],
-            convert: async (model, msg, publish, options, meta) => {
-                const result = await numericAttributes2Payload(msg, meta, model, options, msg.data);
-                if (!result) return;
+const lumiH2ElectricityMeter = (args) => {
+    const options = {
+        disableEnergy: false,
+        disableVoltage: false,
+        disableCurrent: false,
+        ...args,
+    };
 
-                const filtered = {};
-                for (const [key, value] of Object.entries(result)) {
-                    if (value !== undefined && value !== null) {
+    const exposes = [];
+    if (!options.disableEnergy) exposes.push(e.energy());
+    if (!options.disableVoltage) exposes.push(e.voltage());
+    if (!options.disableCurrent) exposes.push(e.current());
+
+    let fromZigbee;
+
+    if (options.disableEnergy || options.disableVoltage || options.disableCurrent) {
+        fromZigbee = [
+            {
+                cluster: "manuSpecificLumi",
+                type: ["attributeReport", "readResponse"],
+                convert: async (model, msg, publish, options, meta) => {
+                    const result = await numericAttributes2Payload(msg, meta, model, options, msg.data);
+                    if (!result) return;
+
+                    const filtered = {};
+                    for (const [key, value] of Object.entries(result)) {
+                        if (value === undefined || value === null) continue;
+
+                        // Filter out disabled attributes
+                        if (key === "energy" && args?.disableEnergy) continue;
+                        if (key === "voltage" && args?.disableVoltage) continue;
+                        if (key === "current" && args?.disableCurrent) continue;
+
                         filtered[key] = value;
                     }
-                }
 
-                return Object.keys(filtered).length > 0 ? filtered : undefined;
+                    return Object.keys(filtered).length > 0 ? filtered : undefined;
+                },
             },
-        },
-    ];
+        ];
+    } else {
+        fromZigbee = [
+            {
+                cluster: "manuSpecificLumi",
+                type: ["attributeReport", "readResponse"],
+                convert: async (model, msg, publish, options, meta) => {
+                    return await numericAttributes2Payload(msg, meta, model, options, msg.data);
+                },
+            },
+        ];
+    }
 
-    const exposes = [e.energy(), e.current()];
-
-    return {
-        isModernExtend: true,
-        fromZigbee,
-        exposes,
-    };
+    return {exposes, fromZigbee, isModernExtend: true};
 };
 
 // Power reporting for each socket is at a different endpoint to the switch state
@@ -142,6 +167,20 @@ const customLumiOnOff = (args) => {
     return result;
 };
 
+const lumiChildLock = (args) =>
+    m.binary({
+        name: "child_lock",
+        cluster: "manuSpecificLumi",
+        attribute: {ID: 0x0285, type: 0x20},
+        valueOn: [true, 1],
+        valueOff: [false, 0],
+        description: "Child lock (disables physical button)",
+        access: "ALL",
+        entityCategory: "config",
+        zigbeeCommandOptions: {manufacturerCode},
+        ...args,
+    });
+
 export default {
     zigbeeModel: ["lumi.plug.aeu002"],
     model: "WP-P09D",
@@ -192,31 +231,8 @@ export default {
             actionLookup: {hold: 0, single: 1, double: 2, release: 255},
         }),
 
-        m.binary({
-            name: "child_lock",
-            cluster: "manuSpecificLumi",
-            attribute: {ID: 0x0285, type: 0x20},
-            endpointName: "1",
-            description: "Lock button on socket 1",
-            valueOn: [true, 1],
-            valueOff: [false, 0],
-            access: "ALL",
-            entityCategory: "config",
-            zigbeeCommandOptions: {manufacturerCode},
-        }),
-
-        m.binary({
-            name: "child_lock",
-            cluster: "manuSpecificLumi",
-            attribute: {ID: 0x0285, type: 0x20},
-            endpointName: "2",
-            description: "Lock button on socket 2",
-            valueOn: [true, 1],
-            valueOff: [false, 0],
-            access: "ALL",
-            entityCategory: "config",
-            zigbeeCommandOptions: {manufacturerCode},
-        }),
+        lumiChildLock({endpointName: "1", description: "Lock button on socket 1"}),
+        lumiChildLock({endpointName: "2", description: "Lock button on socket 2"}),
 
         // Pre-existing lumiOverloadProtection produces config error due to access: "ALL"
         m.numeric({
@@ -236,5 +252,4 @@ export default {
         lumiModernExtend.lumiFlipIndicatorLight(),
         m.identify(),
     ],
-
 };
