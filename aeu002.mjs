@@ -10,38 +10,37 @@ const ea = exposes.access;
 
 // Pre-existing lumiElectricityMeter exposes voltage which is not supported by this device
 // Device appears to only report overall readings, not per-socket
-const lumiH2ElectricityMeter = (args) => {
+const lumiElectricityMeter = (args) => {
     const options = {
-        disableEnergy: false,
-        disableVoltage: false,
-        disableCurrent: false,
+        energy: true,
+        voltage: true,
+        current: true,
         ...args,
     };
 
     const exposes = [];
-    if (!options.disableEnergy) exposes.push(e.energy());
-    if (!options.disableVoltage) exposes.push(e.voltage());
-    if (!options.disableCurrent) exposes.push(e.current());
+    if (options.energy) exposes.push(e.energy());
+    if (options.voltage) exposes.push(e.voltage());
+    if (options.current) exposes.push(e.current());
 
-    let fromZigbee;
+    let fromZigbeeConverters;
 
-    if (options.disableEnergy || options.disableVoltage || options.disableCurrent) {
-        fromZigbee = [
+    if (!options.energy || !options.voltage || !options.current) {
+        fromZigbeeConverters = [
             {
                 cluster: "manuSpecificLumi",
                 type: ["attributeReport", "readResponse"],
-                convert: async (model, msg, publish, options, meta) => {
-                    const result = await numericAttributes2Payload(msg, meta, model, options, msg.data);
+                convert: async (model, msg, publish, opts, meta) => {
+                    const result = await numericAttributes2Payload(msg, meta, model, opts, msg.data);
                     if (!result) return;
 
                     const filtered = {};
                     for (const [key, value] of Object.entries(result)) {
                         if (value === undefined || value === null) continue;
 
-                        // Filter out disabled attributes
-                        if (key === "energy" && args?.disableEnergy) continue;
-                        if (key === "voltage" && args?.disableVoltage) continue;
-                        if (key === "current" && args?.disableCurrent) continue;
+                        if (key === "energy" && !options.energy) continue;
+                        if (key === "voltage" && !options.voltage) continue;
+                        if (key === "current" && !options.current) continue;
 
                         filtered[key] = value;
                     }
@@ -51,25 +50,25 @@ const lumiH2ElectricityMeter = (args) => {
             },
         ];
     } else {
-        fromZigbee = [
+        fromZigbeeConverters = [
             {
                 cluster: "manuSpecificLumi",
                 type: ["attributeReport", "readResponse"],
-                convert: async (model, msg, publish, options, meta) => {
-                    return await numericAttributes2Payload(msg, meta, model, options, msg.data);
+                convert: async (model, msg, publish, opts, meta) => {
+                    return await numericAttributes2Payload(msg, meta, model, opts, msg.data);
                 },
             },
         ];
     }
 
-    return {exposes, fromZigbee, isModernExtend: true};
+    return {exposes, fromZigbee: fromZigbeeConverters, isModernExtend: true};
 };
 
 // Power reporting for each socket is at a different endpoint to the switch state
 const lumiActivePower = (args) => {
     const {name, description, endpoint} = args;
 
-    const fromZigbee = [
+    const fromZigbeeConverters = [
         {
             cluster: "haElectricalMeasurement",
             type: ["attributeReport", "readResponse"],
@@ -89,13 +88,13 @@ const lumiActivePower = (args) => {
 
     return {
         isModernExtend: true,
-        fromZigbee,
+        fromZigbee: fromZigbeeConverters,
         exposes,
     };
 };
 
 // Custom lumiOnOff function with optional device_temperature and power_outage_count exposes
-const customLumiOnOff = (args) => {
+const lumiOnOff = (args) => {
     const options = {
         operationMode: false,
         lockRelay: false,
@@ -110,12 +109,33 @@ const customLumiOnOff = (args) => {
     if (!result.toZigbee) result.toZigbee = [];
     if (!result.exposes) result.exposes = [];
 
-    result.fromZigbee.push(fromZigbee.lumi_specific);
+    if (!options.deviceTemperature || !options.powerOutageCount) {
+        result.fromZigbee.push({
+            ...fromZigbee.lumi_specific,
+            convert: async (model, msg, publish, opts, meta) => {
+                const lumiResult = await fromZigbee.lumi_specific.convert(model, msg, publish, opts, meta);
+                if (!lumiResult) return;
+
+                const filtered = {};
+                for (const [key, value] of Object.entries(lumiResult)) {
+                    if (value === undefined || value === null) continue;
+
+                    if (key === "device_temperature" && !options.deviceTemperature) continue;
+                    if (key === "power_outage_count" && !options.powerOutageCount) continue;
+
+                    filtered[key] = value;
+                }
+
+                return Object.keys(filtered).length > 0 ? filtered : undefined;
+            },
+        });
+    } else {
+        result.fromZigbee.push(fromZigbee.lumi_specific);
+    }
 
     if (options.deviceTemperature) {
         result.exposes.push(e.device_temperature());
     }
-
     if (options.powerOutageCount) {
         result.exposes.push(e.power_outage_count());
     }
@@ -129,8 +149,8 @@ const customLumiOnOff = (args) => {
         if (extend.toZigbee && result.toZigbee) result.toZigbee.push(...extend.toZigbee);
         if (extend.exposes && result.exposes) result.exposes.push(...extend.exposes);
     }
-
     if (options.operationMode === true) {
+        const extend = lumiModernExtend.lumiOperationMode({description: "Decoupled mode for a button"});
         if (options.endpointNames) {
             options.endpointNames.forEach((ep) => {
                 const epExtend = lumiModernExtend.lumiOperationMode({
@@ -141,13 +161,12 @@ const customLumiOnOff = (args) => {
                 if (epExtend.exposes && result.exposes) result.exposes.push(...epExtend.exposes);
             });
         } else {
-            const extend = lumiModernExtend.lumiOperationMode({description: "Decoupled mode for a button"});
             if (extend.toZigbee && result.toZigbee) result.toZigbee.push(...extend.toZigbee);
             if (extend.exposes && result.exposes) result.exposes.push(...extend.exposes);
         }
     }
-
     if (options.lockRelay) {
+        const extend = lumiModernExtend.lumiLockRelay();
         if (options.endpointNames) {
             options.endpointNames.forEach((ep) => {
                 const epExtend = lumiModernExtend.lumiLockRelay({
@@ -158,12 +177,10 @@ const customLumiOnOff = (args) => {
                 if (epExtend.exposes && result.exposes) result.exposes.push(...epExtend.exposes);
             });
         } else {
-            const extend = lumiModernExtend.lumiLockRelay();
             if (extend.toZigbee && result.toZigbee) result.toZigbee.push(...extend.toZigbee);
             if (extend.exposes && result.exposes) result.exposes.push(...extend.exposes);
         }
     }
-
     return result;
 };
 
@@ -209,7 +226,7 @@ export default {
         m.deviceEndpoints({endpoints: {1: 1, 2: 2, usb: 3}}),
         m.forcePowerSource({powerSource: "Mains (single phase)"}),
         lumiModernExtend.lumiZigbeeOTA(),
-        customLumiOnOff({
+        lumiOnOff({
             endpointNames: ["1", "2", "usb"],
             deviceTemperature: false,
         }),
@@ -219,7 +236,7 @@ export default {
         lumiActivePower({name: "power_socket_1_and_usb", description: "Combined power of socket 1 and USB", endpoint: 2}),
         lumiActivePower({name: "power_socket_2", description: "Power of socket 2", endpoint: 3}),
 
-        lumiH2ElectricityMeter(),
+        lumiElectricityMeter({voltage: false}),
 
         lumiModernExtend.lumiPowerOnBehavior(),
 
