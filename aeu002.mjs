@@ -228,6 +228,7 @@ export default {
         lumiModernExtend.lumiZigbeeOTA(),
         lumiOnOff({
             endpointNames: ["1", "2", "usb"],
+            powerOutageMemory: "enum",
             deviceTemperature: false,
         }),
 
@@ -237,8 +238,6 @@ export default {
         lumiActivePower({name: "power_socket_2", description: "Power of socket 2", endpoint: 3}),
 
         lumiElectricityMeter({voltage: false}),
-
-        lumiModernExtend.lumiPowerOnBehavior(),
 
         lumiModernExtend.lumiMultiClick({description: "Multi-click mode for socket 1 button", endpointName: "1"}),
         lumiModernExtend.lumiMultiClick({description: "Multi-click mode for socket 2 button", endpointName: "2"}),
