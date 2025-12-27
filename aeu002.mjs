@@ -8,7 +8,7 @@ const {lumiModernExtend, manufacturerCode, numericAttributes2Payload} = lumi;
 const e = exposes.presets;
 const ea = exposes.access;
 
-// Pre-existing lumiElectricityMeter exposes voltage which is not supported by this device
+// Pre-existing lumiElectricityMeter exposes voltage which is not supported by this device, to be updated with merge
 // Device appears to only report overall readings, not per-socket
 const lumiElectricityMeter = (args) => {
     const options = {
@@ -93,7 +93,7 @@ const lumiActivePower = (args) => {
     };
 };
 
-// Custom lumiOnOff function with optional device_temperature and power_outage_count exposes
+// lumiOnOff function with optional device_temperature and power_outage_count exposes, to be updated with merge
 const lumiOnOff = (args) => {
     const options = {
         operationMode: false,
@@ -248,10 +248,11 @@ export default {
             actionLookup: {hold: 0, single: 1, double: 2, release: 255},
         }),
 
-        lumiChildLock({endpointName: "1", description: "Lock button on socket 1"}),
-        lumiChildLock({endpointName: "2", description: "Lock button on socket 2"}),
+        lumiChildLock({endpointName: "1", description: "Socket 1 button lock"}),
+        lumiChildLock({endpointName: "2", description: "Socket 2 button lock"}),
 
         // Pre-existing lumiOverloadProtection produces config error due to access: "ALL"
+        // lumiModernExtend.lumiOverloadProtection({valueMax: 3250}),
         m.numeric({
             name: "overload_protection",
             cluster: "manuSpecificLumi",
